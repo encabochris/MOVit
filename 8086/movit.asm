@@ -1,201 +1,162 @@
-TITLE        MOV IT (EXE)
-            .MODEL SMALL
-            .STACK 200H
-;----------------------------------------------
-HOME	      DB	 'ps-se.txt', 0
-GHOST 	    DB 	 'ghost.txt', 0
-HOW 	      DB 	 'how.txt', 0
-FILE_HANDLE	DW	 ?
-ERROR_STR	  DB	 'Error!$'
-ERROR_STR2  DB   'ERROR!$'
-FILE_BUFFER	DB 	  1896 DUP('$')
-LOAD	      DB	 'Loading...$'
-COMP	      DB	 'START!    $'
-INIT	      DB	  0ah, 0dh, 20 DUP(219), '$'
-BAR		      DB	  219, '$'
-FLAG	      DB	  0
-ARROW	      DB	  175, '$'
-EMPTY	      DB	  '$'
-ROW		      DB		0
-COL		      DB		0
-ROWD	 	    DB		6H, '$'
-COLD	    	DB		0
-;--------------------------------------------
-          .CODE
-MAIN 		   PROC  FAR
+TITLE     MOV IT(EXE)
+          .MODEL SMALL
+;---------------------------------------------------------------------
+          .STACK 200H
+;---------------------------------------------------------------------
+.DATA
+  ROW               DB 0
+  COL               DB 0
 
-				   MOV 	 AX, @DATA
-			     MOV   DS, AX
+  FLAG              DB 0
 
-        	 CALL  HIDE_CURSOR
-   				 CALL  LOADING
-					 CALL   GAME_LOOP
-			EXIT:
-			    MOV   AX, 4C00H
-			    INT   21H
-MAIN 			ENDP
-;----------------------------------------
-WINNER     PROC  NEAR
-           CALL  BACKGROUND3
-           CALL	 DISP_MENU
-WINNER     ENDP
-;----------------------------------------
-GAME_LOOP  PROC  NEAR
-			MAIN_GAME:
-				 CALL  DISP_HOME
+  CHECKER           DB 0
+  TEMP              DB ?
 
-          RET
+  HOME	      DB	 'screen.txt', 0
+  LOADFile 	  DB 	 'load.txt', 0
+  HowToPlay   DB 	 'ggo.txt', 0
 
-GAME_LOOP ENDP
-;--------------------------------------------
-GETKEY 			PROC 	NEAR                             ;GETS the input from either PLAYER 1 or 2
-						MOV		AH, 01H
-						INT		16H
+  FILE_HANDLE	DW	 ?
+  ERROR_STR	  DB	 'Error READING!!$'
+  FILE_BUFFER	DB 	  1896 DUP('$')
+  LOAD	      DB	 'Moving...$'
+  COMPLETE	  DB	 'START!....$'
+  INIT	      DB	  0ah, 0dh, 20 DUP(219), '$'
+  BAR		      DB	  219, '$'
+  ARROW	      DB	  175, '$'
+  EMPTY	      DB	  '$'
+  SPACE   		DB   ' ', '$'                      ;Character for clearing
+  ROWD	 	    DB		6H, '$'
+  COLD	    	DB		0
 
-						JZ  	LEAVE
+  BEEPCX      DW   ?
+  BEEPBX      DB   ?
+;---------------------------------------------------------------------
+.CODE
 
-						MOV		AH, 00H
-						INT		16H
-						MOV 	TEMP1, AL
-						CMP 	AH, 48H                          ;UP Input for PLAYER 2
-						JE 		PU2
-						CMP 	AH, 50H                          ;DOWN input for PLAYER 2
-						JE 		PU2
-						CMP 	AL, '7'                          ;UP input for PLAYER 1
-						JE 		PU3
-						CMP 	AL, '1'                          ;DOWN input for PLAYER 1
-						JE 		PU3
-						JMP   LEAVE
-				PU2:
-						MOV 	INPUT2, AH
-						JMP 	LEAVE
-				PU3:
-						MOV 	INPUT1, AL
-				LEAVE:
-					  SUB  AX, AX
-						RET
-GETKEY 			ENDP
-;----------------------------------------------
-MOVECURSOR 	PROC 		NEAR
-						MOV 		AH, 02H
-						MOV 		BH, 00
-						INT 		10H
-						RET
-MOVECURSOR 	ENDP
-;----------------------------------------------
-BACKGROUND1 PROC 		NEAR
-						MOV 		AX, 0600H
-						MOV 		BH, 0CH
-						MOV 		CX, 0027H
-						MOV 		DX, 184FH
-						INT 		10H
-						RET
-BACKGROUND1 ENDP
-;----------------------------------------------
-BACKGROUND2 PROC 		NEAR
-						MOV 		AX, 0600H
-						MOV 		BH, 09H
-						MOV 		CX, 0000H
-						MOV 		DX, 184FH
-						INT 		10H
-						RET
-BACKGROUND2 ENDP
-;----------------------------------------------
-BACKGROUND3 PROC 		NEAR
-						MOV 		AX, 0600H
-						MOV 		BH, 0CH
-						MOV 		CX, 0000H
-						MOV 		DX, 184FH
-						INT 		10H
-						RET
-BACKGROUND3 ENDP
-;----------------------------------------------
-BACKGROUND4 PROC 		NEAR
-						MOV 		AX, 0600H
-						MOV 		BH, 09H
-						MOV 		CX, 0000H
-						MOV 		DX, 184FH
-						INT 		10H
-						RET
-BACKGROUND4 ENDP
-;----------------------------------------------
-FILE_READ			PROC		NEAR
-							MOV			AX, 3D02H											;OPEN FILE
-							INT			21H
-							JC			_ERROR
-							MOV			FILE_HANDLE, AX
+MAIN        PROC
 
-							MOV			AH, 3FH												;READ FILE
-							MOV			BX, FILE_HANDLE
-							MOV			CX, 1896
-							LEA			DX, FILE_BUFFER
-							INT			21H
-							JC			_ERROR
+            MOV     AX, @DATA
+            MOV     DS, AX
 
-							MOV			DX, 0500H											;DISPLAY FILE
-							CALL 		SET_CURS
-							LEA			DX, FILE_BUFFER
-							CALL 		DISPLAY
+          	CALL    HIDE_CURSOR
+     				CALL    LOADING
+            CALL    CLS0
+            CALL    SET_SCRN
+  					CALL    DISP_HOME
 
-							MOV 		AH, 3EH         							;CLOSE FILE
-							MOV 		BX, FILE_HANDLE
-							INT 		21H
-							JC 			_ERROR
-
+            EXIT:
+            MOV 		AX, 4C00H
+            INT 		21H
+MAIN        ENDP
+;---------------------------------------------------------------------
+HIDE_CURSOR PROC    NEAR
+			      MOV     CX, 2000H
+			      MOV     AH, 01H
+			      INT     10H
+			      RET
+HIDE_CURSOR ENDP
+;---------------------------------------------------------------------
+CLS0 					PROC		NEAR
+							MOV			AX, 0600H
+							MOV			BH, 0BH
+							MOV			CX, 0000H
+							MOV			DX, 184FH
+							INT			10H
 							RET
-
-			 _ERROR:
-			        LEA			DX, ERROR_STR									;ERROR IN FILE OPERATION
-							CALL 		DISPLAY
-							RET
-FILE_READ			ENDP
-;---------------------------------------------
+CLS0 					ENDP
+;---------------------------------------------------------------------
 LOADING 			PROC 		NEAR
-							CALL 		CLS
-							LEA 		DX, GHOST
+							CALL 		CLS0
+							LEA 		DX, LOADFile
 							CALL 		FILE_READ
 
-							MOV			ROW, 21
-							MOV			COL, 24H
+							MOV			ROW, 22
+							MOV			COL, 23H
+				SCRN:
+				      CALL		SET_CURS
+							CMP			FLAG, 0		;checks flag if its done loading
+							JE			START
+							CMP			FLAG, 1
+							JE			MENU
 
-              SCRN:
-                    CALL		SET_CURS
-                    CMP			FLAG, 0		;check flag if done loading or not
-                    JE			START
-                    CMP			FLAG, 1
-                    JE			MENU
+				START:
+				      LEA			DX, LOAD	;prints loading
+							JMP			SET
 
-              START:
-                    LEA			DX, LOAD	;print loading
-                    JMP			SET
+				SET:
+				      CALL		SET_SCRN	;loading bar
+							CMP			FLAG, 1		;exits after it has completed
+							JE			BACK
+							MOV			FLAG, 1		;resets the screen after it has completed
+							JMP			SCRN
 
-              SET:
-                    CALL		SET_SCRN	;loading bar
-                    CMP			FLAG, 1		;exit if complete
-                    JE			BACK
-                    MOV			FLAG, 1		;reset screen if complete
-                    JMP			SCRN
-
-              MENU:
-                    CALL		SET_CURS	;display if done loading
-                    LEA			DX, COMP
-                    CALL		DISPLAY
+				MENU:
+				      CALL		SET_CURS	;displays menu after loading
+							LEA			DX, COMPLETE
+							CALL		PRINT
 
 				BACK:
 				      MOV			AH, 00H		;get input
 							INT			16H
 							RET
 LOADING 	    ENDP
-;--------------------------------------------------
+;---------------------------------------------------------------------
+COMPARE     PROC    NEAR
+
+            CMP     TEMP, 4DH   ;IF RED
+            JE      UP
+            CMP     TEMP, 4BH   ;IF CYAN
+            JE      DOWN
+            CMP     TEMP, 48H   ;IF BLUE
+            JE      LEFT
+            CMP     TEMP, 50H   ;IF GREEN
+            JE      RIGHT
+            CMP     TEMP, 01
+            JE      QUIT
+
+            UP:
+              CMP     CHECKER, 4DH
+              JE      LEAVE
+              JMP     LEAVE_STILL
+
+            DOWN:
+              CMP     CHECKER, 4BH
+              JE      LEAVE
+              JMP     LEAVE_STILL
+
+            LEFT:
+              CMP     CHECKER, 48H
+              JE      LEAVE
+              JMP     LEAVE_STILL
+
+            RIGHT:
+              CMP     CHECKER, 50H
+              JE      LEAVE
+              JMP     LEAVE_STILL
+
+            LEAVE_STILL:
+              MOV     FLAG, 0
+              RET
+
+            LEAVE:
+              MOV   FLAG, 1
+              RET
+
+            QUIT:
+              CALL  EXIT
+COMPARE     ENDP
+;---------------------------------------------------------------------
 DISP_HOWTO		PROC		NEAR
 							MOV 		ROW, 0
 							MOV 		COL, 0
 							CALL 		SET_CURS
-							CALL		CLS
-							LEA			DX, HOW
+							CALL		CLS0
+							LEA			DX, HOWTOPLAY
 							CALL		FILE_READ
 							MOV			AH, 00H		;get any key input
 							INT			16H
+              CALL    CLS0
 							JMP    DISP_HOME
 					    RET
 DISP_HOWTO		ENDP
@@ -204,7 +165,7 @@ DISP_HOME			PROC		NEAR												;DISPLAY MENU SCREEN
 							MOV 		ROW, 0
 							MOV 		COL, 0
 							CALL 		SET_CURS
-							CALL 		CLS
+							CALL 		CLS0
 							LEA 		DX, HOME
 							CALL 		FILE_READ
 							JMP 		MENU_CH
@@ -217,7 +178,7 @@ MENU_CH				PROC	 	NEAR
 							MOV			COL, 15
 							CALL		SET_CURS
 							LEA			DX, ARROW
-							CALL		DISPLAY
+							CALL		PRINT
 
 				CHOOSE:
 				      MOV			AH, 00H		;get input
@@ -225,35 +186,35 @@ MENU_CH				PROC	 	NEAR
 							CMP 		AL, 0DH 	;ENTER
 							JE			CHOICE
 							CMP			AH, 4BH		;LEFT
-							JE			LEFT
+							JE			LEFT1
 							CMP			AH, 4DH		;RIGHT
-							JE			RIGHT
+							JE			RIGHT1
 
 							JMP			CHOOSE
 
-				RIGHT:
+				RIGHT1:
 				      CALL    BEEP_1
 				      CMP			COL, 49		;IF RIGHT KEY
 							JE			CHOOSE
 							CALL		SET_CURS
 							LEA			DX, SPACE
-							CALL 		DISPLAY
+							CALL 		PRINT
 							ADD			COL, 17
 							CALL		DISP_ARR
 
-				LEFT:
+				LEFT1:
 				      CALL    BEEP_1
 				      CMP			COL, 15 	;IF LEFT KEY
 							JE			CHOOSE
 							CALL		SET_CURS
 							LEA			DX, SPACE
-							CALL 		DISPLAY
+							CALL 		PRINT
 							SUB			COL, 17
 
 				DISP_ARR:
 				      CALL		SET_CURS	;DISPLAY ARROW
 							LEA			DX, ARROW
-							CALL		DISPLAY
+							CALL		PRINT
 
 							JMP			CHOOSE
 
@@ -276,17 +237,60 @@ MENU_CH				PROC	 	NEAR
 				      RET
         START_GAME:
               CALL    BEEP_2
-              CALL    THE_LOOP
+              CALL    LOOP_GAME
               RET
         CALL_HOWTO:
-
-
 MENU_CH				ENDP
 ;--------------------------------------------------
+LOOP_GAME     PROC    NEAR
+
+            ITERATE:
+              MOV     BH, 0BH
+              CALL    CLS
+              CALL    RANDOMIZE
+              CMP     DL, '1'
+              JE      CHANGE1
+              CMP     DL, '0'
+              JE      CHANGE2
+              CMP     DL, '2'
+              JE      CHANGE3
+              CMP     DL, '3'
+              JE      CHANGE4
+              JMP     ITERATE
+
+            CHANGE1:
+              MOV     CHECKER, 4BH
+              MOV     BH, 10H
+              JMP     LOOP_
+
+            CHANGE2:
+              MOV     CHECKER, 4DH
+              MOV     BH, 20H
+              JMP     LOOP_
+
+            CHANGE3:
+              MOV     CHECKER, 50H
+              MOV     BH, 30H
+              JMP     LOOP_
+
+            CHANGE4:
+              MOV     CHECKER, 48H
+              MOV     BH, 40H
+              JMP     LOOP_
+
+            LOOP_:
+              CALL    CLS2
+              CALL    GET_KEY
+              CALL    COMPARE
+              CMP     FLAG, 1
+              JE      ITERATE
+              JMP     LOOP_
+LOOP_GAME     ENDP
+;--------------------------------------------------
 SET_SCRN			PROC		NEAR
-							CALL		DISPLAY
+							CALL		PRINT
 							LEA			DX, INIT	;print initial bar
-							CALL 		DISPLAY
+							CALL 		PRINT
 							MOV			CX, 60		;set counter
 
 				PRGRS:
@@ -294,37 +298,13 @@ SET_SCRN			PROC		NEAR
 							JE			SKIP		;skip delay if complete
 							CALL 		DELAY
 				SKIP:
-				      LEA			DX, BAR		;display more bars
-							CALL		DISPLAY
+				      LEA			DX, BAR		;PRINT more bars
+							CALL		PRINT
 							LOOP		PRGRS
 
 							RET
 SET_SCRN			ENDP
-;------------------------------------------------------------
-DISPLAY 			PROC		NEAR
-							MOV			AH, 09H
-							INT			21H
-							RET
-DISPLAY				ENDP
-;------------------------------------------------------------
-SET_CURS 			PROC		NEAR
-							MOV			AH, 02H
-							MOV			BH, 00
-							MOV			DH, ROW
-							MOV			DL, COL
-							INT			10H
-							RET
-SET_CURS 			ENDP
-;------------------------------------------------------------
-CLS 					PROC		NEAR
-							MOV			AX, 0600H
-							MOV			BH, 07H
-							MOV			CX, 0000H
-							MOV			DX, 184FH
-							INT			10H
-							RET
-CLS 					ENDP
-;-----------------------------------------------
+;---------------------------------------------------------------------
 DELAY 				PROC 		NEAR
 							MOV     BX, 003H
 
@@ -341,108 +321,152 @@ DELAY 				PROC 		NEAR
 
 			       RET
 DELAY 			 ENDP
-;------------------------------------------------------------
-DISP_MENU	PROC	NEAR
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU1
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU2
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU3
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU4
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU5
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU6
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU7
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU8
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-      CMP   LENGTH1, 0
-      JE    P2_WINS
-      CMP   LENGTH2, 0
-      JE    P1_WINS
-  P1_WINS:
-      MOV 	  AH, 09H
-			LEA 	  DX, PROMPT_1
-			INT 	  21H
-			JMP     JUMP_HERE
-  P2_WINS:
-      MOV 	  AH, 09H
-			LEA 	  DX, PROMPT_2
-			INT 	  21H
+;---------------------------------------------------------------------
+SET_CURS 			PROC		NEAR
+							MOV			AH, 02H
+							MOV			BH, 00
+							MOV			DH, ROW
+							MOV			DL, COL
+							INT			10H
+							RET
+SET_CURS 			ENDP
+;---------------------------------------------------------------------
+RANDOMIZE   PROC
+            MOV     AH, 00h
+            INT     1AH
 
-  JUMP_HERE:
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU10
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU11
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU12
-			CALL	DISPLAY
-			ADD		ROWD, 1H
-			CALL	SET_CURSD
-			LEA		DX, MENU12
-			CALL	DISPLAY
-		  ADD		ROWD, 1H
-			CALL	SET_CURSD
-			CALL  COMBI1
-			LEA		DX, MENU13
-			CALL	DISPLAY
-			;CALL  COMBI1
-	ASK_INPUT:
-			MOV   AH, 00H
-			INT   16H
-      CMP   AL, 0DH
-      JE    RET_A
-      JMP   ASK_INPUT
-			RET
+            MOV     AX, DX
+            XOR     DX, DX
+            MOV     CX, 4
+            DIV     CX
 
-  RET_A:
-      CALL  RESET_DATA
-      CALL  GAME_LOOP
-      RET
-DISP_MENU	ENDP
-;------------------------------------------------------------
-SET_CURSD PROC	NEAR
-			MOV		AH, 02H
-			MOV		BH, 00
-			MOV		DH, ROWD
-			MOV		DL, COLD
-			INT		10H
-			RET
-SET_CURSD ENDP
-;------------------------------------------------------------
-RESET_DATA   PROC    NEAR                                                ;RESETS the data for next game
-             RET
-RESET_DATA   ENDP
+            ADD     DL, '0'
+            RET
+RANDOMIZE   ENDP
+;---------------------------------------------------------------------
+CLS         PROC
+            MOV     AX, 0600H
+            MOV     CX, 0000H
+            MOV     DX, 184FH
+            INT     10H
+            RET
+CLS         ENDP
+;---------------------------------------------------------------------
+CLS2         PROC
+            MOV     AX, 0600H
+            MOV     CX, 0614H
+            MOV     DX, 123CH
+            INT     10H
+            RET
+CLS2         ENDP
+;---------------------------------------------------------------------
+SET_CURSOR  PROC
+            MOV			AH, 02H
+            MOV			BH, 00
+            MOV			DL, ROW
+            MOV			DH, COL
+            INT			10H
+            RET
+SET_CURSOR  ENDP
+;---------------------------------------------------------------------
+FILE_READ			PROC		NEAR
+							MOV			AX, 3D02H											;OPEN FILE
+							INT			21H
+							JC			_ERROR
+							MOV			FILE_HANDLE, AX
+
+							MOV			AH, 3FH												;READ FILE
+							MOV			BX, FILE_HANDLE
+							MOV			CX, 1896
+							LEA			DX, FILE_BUFFER
+							INT			21H
+							JC			_ERROR
+
+							MOV			DX, 0500H											;DISPLAY FILE
+							CALL 		SET_CURS
+							LEA			DX, FILE_BUFFER
+							CALL 		PRINT
+
+							MOV 		AH, 3EH         							;CLOSE FILE
+							MOV 		BX, FILE_HANDLE
+							INT 		21H
+							JC 			_ERROR
+
+							RET
+
+			 _ERROR:
+			        LEA			DX, ERROR_STR									;ERROR IN FILE OPERATION
+							CALL 		PRINT
+							RET
+				BK:
+				      RET
+FILE_READ			ENDP
+;---------------------------------------------------------------------
+PRINT       PROC
+            MOV     AH, 09
+            INT     21H
+            RET
+PRINT       ENDP
+;---------------------------------------------------------------------
+BEEP_1       PROC    NEAR        ;high pitch beep sound for menu option
+
+             MOV	AL, 182
+						 OUT 43H, AL
+             MOV AX, 1111
+
+						 OUT	42H, AL
+						 MOV AL, AH
+						 OUT 42H, AL
+						 IN AL, 61H
+
+						 OR AL, 00000011B
+						 OUT 61H, AL
+						 MOV BEEPBX, 25
+
+						.PAUSE1a:
+						 MOV BEEPCX, 2900
+						.PAUSE2a:
+						 DEC BEEPCX
+						 JNE .PAUSE2a
+						 DEC BEEPBX
+						 JNE .PAUSE1a
+						 IN AL, 61H
+
+						 AND AL, 11111100B
+						 OUT 61H, AL
+						 RET
+BEEP_1       ENDP
 ;--------------------------------------------------------------
-MUSIC       PROC   NEAR                                             ;PRODUCES music for the gameover screen
+BEEP_2       PROC     NEAR           ;beep for enter
+             MOV	AL, 182
+						 OUT 43H, AL
+						 MOV AX, 8880
+
+
+						 OUT 42H,  AL
+						 MOV AL,   AH
+						 OUT 42H,  AL
+						 IN  AL,   61H
+
+						 OR AL, 00000011B
+						 OUT 61H, AL
+						 MOV BEEPBX, 25
+
+						.PAUSE1b:
+						 MOV BEEPCX, 2900
+						.PAUSE2b:
+						 DEC BEEPCX
+						 JNE .PAUSE2b
+						 DEC BEEPBX
+						 JNE .PAUSE1b
+						 IN AL, 61H
+
+						 AND AL, 11111100B
+						 OUT 61H, AL
+						 RET
+BEEP_2       ENDP
+;--------------------------------------------------------------
+MUSIC       PROC   NEAR                 ;PRODUCES music for the gameover screen
 						MOV   AL, 182
 						OUT 43H, AL
 
@@ -468,31 +492,15 @@ MUSIC       PROC   NEAR                                             ;PRODUCES mu
 						OUT 61H, AL
 						RET
 MUSIC       ENDP
-;--------------------------------------------------------------
-COMBI1     PROC   NEAR                                        ;MUSIC COMBINATION 1
-		       MOV   AX, 2152
-					 MOV   BEEPCX, 500
-					 CALL  MUSIC
-					 MOV   AX, 3403
-					 MOV   BEEPCX, 10
-					 CALL  MUSIC
-					 MOV   AX, 3224
-					 MOV   BEEPCX, 1
-					 CALL  MUSIC
-					 MOV   AX, 3416
-					 MOV   BEEPCX, 10
-					 CALL  MUSIC
-					 MOV   AX, 3834
-					 MOV   BEEPCX, 10
-					 CALL  MUSIC
-					 RET
-COMBI1     ENDP
-;--------------------------------------------------------------
-COMBI2    PROC    NEAR                                       ;MUSIC COMBINATION 2
-				  MOV     AX, 3043
-				  MOV     BEEPCX, 1
-				  CALL    MUSIC
-				  RET
-COMBI2    ENDP
-;--------------------------------------------------------------
-          END 				 MAIN
+;---------------------------------------------------------------------
+GET_KEY	    PROC	NEAR
+
+          	MOV		AH, 00H
+          	INT		16H
+
+          	MOV		TEMP, AH
+
+          	RET
+GET_KEY 	  ENDP
+;---------------------------------------------------------------------
+END
