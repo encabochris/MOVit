@@ -14,7 +14,7 @@ TITLE     MOV IT(EXE)
 
   HOME	      DB	 'screen.txt', 0
   LOADFile 	  DB 	 'load.txt', 0
-  HowToPlay   DB 	 'ggo.txt', 0
+  HowToPlay   DB 	 'htp.txt', 0
 
   FILE_HANDLE	DW	 ?
   ERROR_STR	  DB	 'Error READING!!$'
