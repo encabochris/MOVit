@@ -1,51 +1,45 @@
-TITLE     MOV IT(EXE)
+ TITLE     MOV IT(EXE)
           .MODEL SMALL
-;---------------------------------------------------------------------
           .STACK 200H
-;---------------------------------------------------------------------
 .DATA
-  ROW         DB   0
-  COL         DB   0
+;---------------------------------- VARIABLES ----------------------------------
+ ROW           DB   0                                           ;variable for row
+ COL           DB   0                                           ;variable for col
 
-  INPUT_FLAG  DB   0
-  FLAG        DB   0
-  TIME_FLAG		DB   0
-  TIME_DONE		DB   0
+ FLAG          DB   0                                           ;flags
+ TIME_FLAG	   DB   0                                           ;flags the current time
+ TIME_DONE		 DB   0                                           ;flags the time completed
 
-  SCORE				DB   0
-  SCORE_MSG   DB   'SCORE: $'
-  BUF 				DB   6 DUP ('$')
+ SCORE				 DB   0                                           ;stores the score of the current player
+ SCORE_MSG     DB   'SCORE: $'                                  ;score label
+ BUF 	  			 DB   6 DUP ('$')                                 ;actual score
 
-  CHECKER     DB   0
-  TEMP        DB   ?
-
-  TIME 				DB   ?
+ CHECKER       DB   0                                           ;stores the current color display value
+ TEMP          DB   ?                                           ;stores temporary values
+ TIME 				 DB   ?                                           ;stores the current time
 
 
-  HOME	      DB	 'screen.txt', 0
-  GAMEbg      DB   'bg.txt' , 0
-  LOADFile 	  DB 	 'load.txt', 0
-  HowToPlay   DB 	 'htp.txt', 0
-  GAMEOVER	  DB 	 'ggo.txt', 0
+ HOME	         DB	   'screen.txt' , 0                           ;home screen file
+ GAMEbg        DB    'bg.txt'     , 0                           ;background screen file
+ LOADFile 	   DB 	 'load.txt'   , 0                           ;loading screen file
+ HowToPlay     DB 	 'htp.txt'    , 0                           ;HTP screen file (htp means How to play)
+ GAMEOVER	     DB 	 'ggo.txt'    , 0                           ;gameover screen file
 
-  FILE_HANDLE	DW	 ?
-  ERROR_STR	  DB	 'Error READING!!$'
-  FILE_BUFFER	DB 	  1896 DUP('$')
-  LOAD	      DB	 'Moving...$'
-  COMPLETE	  DB	 'START!....$'
-  INIT	      DB	  0ah, 0dh, 20 DUP(219), '$'
-  BAR		      DB	  219, '$'
-  ARROW	      DB	  175, '$'
-  EMPTY	      DB	  '$'
-  SPACE   		DB   ' ', '$'                      ;Character for clearing
-  ROWD	 	    DB		6H, '$'
-  COLD	    	DB		0
+ FILE_HANDLE	 DW	 ?                                            ;variable for file handling
+ FILE_BUFFER	 DB 	  1896 DUP('$')                             ;file buffer
+ LOAD	         DB	 'Moving...$'                                 ;Moving string label
+ ERROR_STR	   DB	 'Error READING!!$'                           ;error string label
+ COMPLETE	     DB	 'START!....$'                                ;start string label
+ INIT	         DB	  0ah, 0dh, 20 DUP(219), '$'                  ;initial bar
+ BAR		       DB	  219, '$'                                    ;variable of the extended ascii bar
+ ARROW	       DB	  175, '$'                                    ;variable of the extended ascii arrow
+ SPACE   		   DB   ' ', '$'                                    ;character used for clearing
 
-  BEEPCX      DW   ?
-  BEEPBX      DB   ?
-;---------------------------------------------------------------------
+ BEEPCX        DW   ?                                           ;beep/sound ctr
+ BEEPBX        DB   ?                                           ;beep/sound value from the memory
+
 .CODE
-
+;------------------------------ FUNCTIONS / PROCS  -----------------------------
 MAIN        PROC
 
             MOV     AX, @DATA
@@ -61,14 +55,14 @@ MAIN        PROC
             MOV 		AX, 4C00H
             INT 		21H
 MAIN        ENDP
-;---------------------------------------------------------------------
+;-------------------- this function hides the blinking cursor  -----------------
 HIDE_CURSOR PROC    NEAR
 			      MOV     CX, 2000H
 			      MOV     AH, 01H
 			      INT     10H
 			      RET
 HIDE_CURSOR ENDP
-;---------------------------------------------------------------------
+;--------------------- cls used in displays screens ----------------------------
 CLS0 					PROC		NEAR
 							MOV			AX, 0600H
 							MOV			BH, 0BH
@@ -77,10 +71,10 @@ CLS0 					PROC		NEAR
 							INT			10H
 							RET
 CLS0 					ENDP
-;---------------------------------------------------------------------
+;------------------------ loads the loading screen -----------------------------
 LOADING 			PROC 		NEAR
 							CALL 		CLS0
-							LEA 		DX, LOADFile
+							LEA 		DX, LOADFile                             ;prints the loading file screen
 							CALL 		FILE_READ
 
 							MOV			ROW, 22
@@ -88,42 +82,42 @@ LOADING 			PROC 		NEAR
 
 				SCRN:
 				      CALL		SET_CURS
-							CMP			FLAG, 0		;checks flag if its done loading
+							CMP			FLAG, 0		                               ;checks flag if its done loading
 							JE			START
 							CMP			FLAG, 1
 							JE			MENU
 
 				START:
-				      LEA			DX, LOAD	;prints loading
+				      LEA			DX, LOAD	                               ;prints the string "Moving"
 							JMP			SET
 
 				SET:
-				      CALL		SET_SCRN	;loading bar
-							CMP			FLAG, 1		;exits after it has completed
+				      CALL		SET_SCRN	                               ;loading bar
+							CMP			FLAG, 1		                               ;exits after it has completed
 							JE			BACK
-							MOV			FLAG, 1		;resets the screen after it has completed
+							MOV			FLAG, 1		                               ;resets the screen after it has completed
 							JMP			SCRN
 
 				MENU:
-				      CALL		SET_CURS	;displays menu after loading
+				      CALL		SET_CURS	                               ;displays the menu screen after loading
 							LEA			DX, COMPLETE
 							CALL		PRINT
 
 				BACK:
-				      MOV			AH, 00H		;gets input
+				      MOV			AH, 00H
 							INT			16H
 							RET
 LOADING 	    ENDP
-;---------------------------------------------------------------------
+;-------- proc that compares if the input and displayed color matches-----------
 COMPARE     PROC    NEAR
 
-            CMP     TEMP, 4DH   ;IF RED
+            CMP     TEMP, 4DH                                  ;if red
             JE      UP
-            CMP     TEMP, 4BH   ;IF CYAN
+            CMP     TEMP, 4BH                                  ;if cyan
             JE      DOWN
-            CMP     TEMP, 48H   ;IF BLUE
+            CMP     TEMP, 48H                                  ;if blue
             JE      LEFT
-            CMP     TEMP, 50H   ;IF GREEN
+            CMP     TEMP, 50H                                  ;if green
             JE      RIGHT
             CMP     TEMP, 01
             JE      QUIT
@@ -171,7 +165,7 @@ COMPARE     PROC    NEAR
             QUIT:
               CALL  EXIT
 COMPARE     ENDP
-;---------------------------------------------------------------------
+;----------------------- displays the how to play screen -----------------------
 DISP_HOWTO		PROC		NEAR
 							MOV 		ROW, 0
 							MOV 		COL, 0
@@ -179,14 +173,14 @@ DISP_HOWTO		PROC		NEAR
 							CALL		CLS0
 							LEA			DX, HOWTOPLAY
 							CALL		FILE_READ
-							MOV			AH, 00H		;get any key input
+							MOV			AH, 00H
 							INT			16H
               CALL    CLS0
 							JMP    DISP_HOME
 					    RET
 DISP_HOWTO		ENDP
-;-----------------------------------------
-DISP_HOME			PROC		NEAR									;DISPLAYS THE MENU SCREEN
+;-------------------------- displays the menu screen ---------------------------
+DISP_HOME			PROC		NEAR	                           								
 							MOV 		ROW, 0
 							MOV 		COL, 0
 							CALL 		SET_CURS
@@ -196,7 +190,7 @@ DISP_HOME			PROC		NEAR									;DISPLAYS THE MENU SCREEN
 							JMP 		MENU_CH
 							RET
 DISP_HOME			ENDP
-;--------------------------------------------------
+;--------------------------- displays the menu screen --------------------------
 DISP_BG			PROC		NEAR
 							MOV 		ROW, 0
 							MOV 		COL, 0
@@ -207,7 +201,7 @@ DISP_BG			PROC		NEAR
 							JMP 		MENU_CH
 							RET
 DISP_BG			ENDP
-;--------------------------------------------------
+;------------------------ proc for the menu choices screen ---------------------
 MENU_CH				PROC	 	NEAR
 
 							MOV			ROW, 22
@@ -217,20 +211,20 @@ MENU_CH				PROC	 	NEAR
 							CALL		PRINT
 
 				CHOOSE:
-				      MOV			AH, 00H		;get input
+				      MOV			AH, 00H		                            ;gets the user input
 							INT			16H
-							CMP 		AL, 0DH 	;ENTER
+							CMP 		AL, 0DH            	                  ;compares if the choice is enter
 							JE			CHOICE
-							CMP			AH, 4BH		;LEFT
+							CMP			AH, 4BH		                            ;compares if the input is the left key
 							JE			LEFT1
-							CMP			AH, 4DH		;RIGHT
+							CMP			AH, 4DH		                            ;compares id the input is the right key
 							JE			RIGHT1
 
 							JMP			CHOOSE
 
-				RIGHT1:
+				RIGHT1:                                             ;if right
 				      CALL    BEEP_1
-				      CMP			COL, 49		;IF RIGHT KEY
+				      CMP			COL, 49
 							JE			CHOOSE
 							CALL		SET_CURS
 							LEA			DX, SPACE
@@ -238,24 +232,24 @@ MENU_CH				PROC	 	NEAR
 							ADD			COL, 17
 							CALL		DISP_ARR
 
-				LEFT1:
+				LEFT1:                                              ;if left
 				      CALL    BEEP_1
-				      CMP			COL, 15 	;IF LEFT KEY
+				      CMP			COL, 15
 							JE			CHOOSE
 							CALL		SET_CURS
 							LEA			DX, SPACE
 							CALL 		PRINT
 							SUB			COL, 17
 
-				DISP_ARR:
-				      CALL		SET_CURS	;DISPLAY ARROW
+				DISP_ARR:                                           ;displays the arrow
+				      CALL		SET_CURS
 							LEA			DX, ARROW
 							CALL		PRINT
 
 							JMP			CHOOSE
 
-				CHOICE:
-				      CMP 		COL, 15		;START GAME
+				CHOICE:                                            ;checks the choice of the user
+				      CMP 		COL, 15
 							JE			START_GAME
 							CMP 		COL, 32
 							JE			HOW_PG
@@ -263,22 +257,24 @@ MENU_CH				PROC	 	NEAR
 							JE			FIN
 							JMP 		CHOOSE
 
-				HOW_PG:
+				HOW_PG:                                            ;option that calls the how to play screen
 				      CALL    BEEP_2
               CALL    DISP_HOWTO
               RET
-				FIN:
+
+				FIN:                                               ;option that ends the game
 				      CALL    BEEP_2
-				      CALL		EXIT	;EXIT GAME
+				      CALL		EXIT
 				      RET
-        START_GAME:
+
+        START_GAME:                                        ;option that starts the game
               CALL    BEEP_2
               ;CALL    DISP_BG
               CALL    LOOP_GAME
               RET
-        CALL_HOWTO:
+
 MENU_CH				ENDP
-;--------------------------------------------------
+;-------------------------- proc that loops the game ---------------------------
 LOOP_GAME     PROC    NEAR
 
 
@@ -329,27 +325,27 @@ LOOP_GAME     PROC    NEAR
               JE      ITERATE
               JMP     LOOP_
 LOOP_GAME     ENDP
-;--------------------------------------------------
+;------------------------ proc that prints the loading bar ---------------------
 SET_SCRN			PROC		NEAR
 							CALL		PRINT
               ;CALL    MUSIC
 
-							LEA			DX, INIT	;print initial bar
+							LEA			DX, INIT                     	     ;prints the initial bar
 							CALL 		PRINT
-              MOV			CX, 60		;set counter
+              MOV			CX, 60		                         ;set counter
 
-				PRGRS:
+				PROG:
 				      CMP			FLAG, 1
-							JE			SKIP		;skip delay if complete
+							JE			SKIP		                           ;skip delay if complete
 							CALL 		DELAY
 				SKIP:
-				      LEA			DX, BAR		;PRINT more bars
+				      LEA			DX, BAR		                         ;prints the other bars
 							CALL		PRINT
-							LOOP		PRGRS
+							LOOP		PROG
 
 							RET
 SET_SCRN			ENDP
-;---------------------------------------------------------------------
+;----------------------- proc that displays the gameover screen ----------------
 DISP_GAMEOVER		PROC
       					MOV 		ROW, 00
       					MOV 		COL, 00
@@ -371,7 +367,7 @@ DISP_GAMEOVER		PROC
                     JMP      EXIT
       					RET
 DISP_GAMEOVER		ENDP
-;---------------------------------------------------------------------
+;-------------------------- delays the a certain proc --------------------------
 DELAY 				PROC 		NEAR
 							MOV     BX, 003H
 
@@ -388,7 +384,7 @@ DELAY 				PROC 		NEAR
 
 			       RET
 DELAY 			 ENDP
-;---------------------------------------------------------------------
+;----------------------------- sets the initial cursor -------------------------
 SET_CURS 			PROC		NEAR
 							MOV			AH, 02H
 							MOV			BH, 00
@@ -397,7 +393,7 @@ SET_CURS 			PROC		NEAR
 							INT			10H
 							RET
 SET_CURS 			ENDP
-;---------------------------------------------------------------------
+;--------------- randomly chooses one color from the 4 given colors ------------
 RANDOMIZE   PROC
             MOV     AH, 00h
             INT     1AH
@@ -410,7 +406,7 @@ RANDOMIZE   PROC
             ADD     DL, '0'
             RET
 RANDOMIZE   ENDP
-;---------------------------------------------------------------------
+;--------------------------------- clears screen -------------------------------
 CLS         PROC
             MOV     AX, 0600H
             MOV     CX, 0000H
@@ -418,7 +414,7 @@ CLS         PROC
             INT     10H
             RET
 CLS         ENDP
-;---------------------------------------------------------------------
+;--------------------------- clears the smaller screen -------------------------
 CLS2         PROC
             MOV     AX, 0600H
             MOV     CX, 0614H
@@ -426,26 +422,26 @@ CLS2         PROC
             INT     10H
             RET
 CLS2         ENDP
-;---------------------------------------------------------------------
+;-------------------------------- file reads -----------------------------------
 FILE_READ			PROC		NEAR
-							MOV			AX, 3D02H											;OPEN FILE
+							MOV			AX, 3D02H											               ;opens the file
 							INT			21H
 							JC			_ERROR
 							MOV			FILE_HANDLE, AX
 
-							MOV			AH, 3FH												;READ FILE
+							MOV			AH, 3FH												               ;reads the file
 							MOV			BX, FILE_HANDLE
 							MOV			CX, 1896
 							LEA			DX, FILE_BUFFER
 							INT			21H
 							JC			_ERROR
 
-							MOV			DX, 0500H											;DISPLAY FILE
+							MOV			DX, 0500H										                ;displays the file
 							CALL 		SET_CURS
 							LEA			DX, FILE_BUFFER
 							CALL 		PRINT
 
-							MOV 		AH, 3EH         							;CLOSE FILE
+							MOV 		AH, 3EH         							              ;closes the file
 							MOV 		BX, FILE_HANDLE
 							INT 		21H
 							JC 			_ERROR
@@ -453,19 +449,19 @@ FILE_READ			PROC		NEAR
 							RET
 
 			 _ERROR:
-			        LEA			DX, ERROR_STR									;ERROR IN FILE OPERATION
+			        LEA			DX, ERROR_STR									             ;prints the error message in file operation
 							CALL 		PRINT
 							RET
 				BK:
 				      RET
 FILE_READ			ENDP
-;---------------------------------------------------------------------
+;--------------------------- proc that prints/display strings ------------------
 PRINT       PROC
             MOV     AH, 09
             INT     21H
             RET
 PRINT       ENDP
-;---------------------------------------------------------------------
+;--------------------------- proc that prints the score ------------------------
 PRINT_SCORE		PROC
 				MOV 	ROW, 00
 				MOV 	COL, 00
@@ -480,11 +476,11 @@ PRINT_SCORE		PROC
 				CALL 	PRINT
 				RET
 PRINT_SCORE		ENDP
-;---------------------------------------------------------------------
-NUM_TO_STRING	PROC
+;---------------------------- proc that converts int to string  ----------------
+NUM_TO_STRING	PROC                                              ;this procedure converts an integer to string
 				XOR		AX, AX
 				MOV 	AL, SCORE
-				LEA		SI, BUF
+				LEA		SI, BUF                                           ;prints the actual score
 
 				MOV 	BX, 10
 				MOV 	CX, 0
@@ -506,8 +502,8 @@ NUM_TO_STRING	PROC
 
 				RET
 NUM_TO_STRING	ENDP
-;---------------------------------------------------------------------
-BEEP_1       PROC    NEAR        ;high pitch beep sound for menu option
+;--------------------------- sound effect for menu screen ----------------------
+BEEP_1       PROC    NEAR                                     ;high pitch beep sound for menu option
 
              MOV	AL, 182
 						 OUT 43H, AL
@@ -535,8 +531,8 @@ BEEP_1       PROC    NEAR        ;high pitch beep sound for menu option
 						 OUT 61H, AL
 						 RET
 BEEP_1       ENDP
-;--------------------------------------------------------------
-BEEP_2       PROC     NEAR           ;beep for enter
+;------------------- sound effect for enter in the menu screen -----------------
+BEEP_2       PROC     NEAR
              MOV	AL, 182
 						 OUT 43H, AL
 						 MOV AX, 8880
@@ -564,8 +560,8 @@ BEEP_2       PROC     NEAR           ;beep for enter
 						 OUT 61H, AL
 						 RET
 BEEP_2       ENDP
-;--------------------------------------------------------------
-BEEP_up       PROC     NEAR           ;beep for up key
+;--------------------------- beep for up arrow key -----------------------------
+BEEP_up       PROC     NEAR
              MOV	AL, 182
 						 OUT 43H, AL
 						 MOV AX, 9203
@@ -593,8 +589,8 @@ BEEP_up       PROC     NEAR           ;beep for up key
 						 OUT 61H, AL
 						 RET
 BEEP_up      ENDP
-;--------------------------------------------------------------
-BEEP_down    PROC     NEAR           ;beep for down key
+;----------------------------- beep for down key -------------------------------
+BEEP_down    PROC     NEAR
              MOV	AL, 182
 						 OUT 43H, AL
 						 MOV AX, 9090
@@ -622,8 +618,8 @@ BEEP_down    PROC     NEAR           ;beep for down key
 						 OUT 61H, AL
 						 RET
 BEEP_down    ENDP
-;--------------------------------------------------------------
-BEEP_left    PROC     NEAR           ;beep for down key
+;------------------------------ beep for left key ------------------------------
+BEEP_left    PROC     NEAR
 
              MOV	AL, 182
 						 OUT 43H, AL
@@ -651,8 +647,8 @@ BEEP_left    PROC     NEAR           ;beep for down key
 						 OUT 61H, AL
 						 RET
 BEEP_left    ENDP
-;--------------------------------------------------------------
-BEEP_right   PROC     NEAR           ;beep for down key
+;------------------------------ beep for right key ------------------------------
+BEEP_right   PROC     NEAR
              MOV	AL, 182
 						 OUT 43H, AL
 						 MOV AX,  7462
@@ -679,8 +675,8 @@ BEEP_right   PROC     NEAR           ;beep for down key
 						 OUT 61H, AL
 						 RET
 BEEP_right   ENDP
-;--------------------------------------------------------------
-MUSIC       PROC   NEAR                 ;PRODUCES music for the gameover screen
+;------------------------ music background for loading screen ------------------
+MUSIC       PROC   NEAR
 						MOV   AL, 182
 						OUT   44H, AL
 
@@ -706,8 +702,8 @@ MUSIC       PROC   NEAR                 ;PRODUCES music for the gameover screen
 						OUT 61H, AL
 						RET
 MUSIC       ENDP
-;---------------------------------------------------------------------
-MUSIC_GO    PROC   NEAR             ;PRODUCES music for the gameover screen
+;---------------------- music backgroundfor gameover screen  -------------------
+MUSIC_GO    PROC   NEAR
 						MOV   AL, 182
 						OUT 43H, AL
 
@@ -733,7 +729,7 @@ MUSIC_GO    PROC   NEAR             ;PRODUCES music for the gameover screen
 						OUT 61H, AL
 						RET
 MUSIC_GO      ENDP
-;---------------------------------------------------------------------
+;----------------------------- gets any key input ------------------------------
 GET_KEY	    PROC	NEAR
 
           	MOV		AH, 00H
@@ -743,14 +739,14 @@ GET_KEY	    PROC	NEAR
 
           	RET
 GET_KEY 	  ENDP
-;---------------------------------------------------------------------
+;------------------------------ get the current time ---------------------------
 GET_TIME 		PROC
       			MOV		AH, 2CH
       			INT 	21H
       			MOV 	TIME, DH
       			RET
 GET_TIME 		ENDP
-;---------------------------------------------------------------------
+;----------------------------- proc that compares the time ---------------------
 COMPARE_TIME	PROC
       				MOV 	AH, 2CH
       				INT 	21H
